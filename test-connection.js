@@ -3,13 +3,13 @@ const mysql = require('mysql2/promise');
 
 async function testConnection() {
   try {
-    // Test with different configuration
+    // Konfigurasi dari file .env
     const connection = await mysql.createConnection({
-      host: 'db-much.cfo8uqy0i602.ap-southeast-2.rds.amazonaws.com',
-      port: 3306,
-      user: 'admin',
-      password: 'Bravo932q#', // Ganti dengan password yang benar
-      database: 'much',
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
       ssl: {
         rejectUnauthorized: false
       }
