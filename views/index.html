@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Much-Tugas2</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Animated Particles Background -->
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container">
+        <div class="header-section">
+            <h1>📤 Upload Berkas</h1>
+            <p class="subtitle">Submit your File to AWS S3</p>
+        </div>
+        
+        <!-- Single Form Section -->
+        <div class="form-section">
+            <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+                <!-- Student Information -->
+                <div class="student-info">
+                    <div class="input-row">
+                        <div class="input-container">
+                            <label for="nama">Nama Lengkap</label>
+                            <input type="text" name="nama" id="nama" class="input-field" placeholder="Masukkan nama lengkap" required>
+                        </div>
+                        <div class="input-container">
+                            <label for="nrp">NRP</label>
+                            <input type="text" name="nrp" id="nrp" class="input-field" placeholder="Masukkan NRP" required pattern="[0-9]{10}" title="NRP harus 10 digit angka">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Upload -->
+                <div class="file-upload-section">
+                    <label for="file" class="file-label">File Tugas</label>
+                    <div class="file-input-container">
+                        <input type="file" name="file" id="file" required>
+                    </div>
+                </div>
+                
+                <!-- Submit Button -->
+                <div class="submit-section">
+                    <button type="submit" class="btn btn-primary">📤 Upload Tugas</button>
+                </div>
+
+                <!-- Loading State -->
+                <div class="loading" id="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Uploading tugas...</p>
+                </div>
+            </form>
+            
+            <!-- Navigation Button -->
+            <div class="nav-section">
+                <a href="/files" class="btn btn-secondary">📁 Lihat Semua Berkas</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="modal-header">
+                <div class="modal-icon" id="modalIcon">✅</div>
+                <h2 class="modal-title" id="modalTitle">Success</h2>
+            </div>
+            <p class="modal-message" id="modalMessage">Your assignment has been uploaded successfully!</p>
+            <div class="modal-details" id="modalDetails" style="display: none;">
+                <!-- Details will be populated by JavaScript -->
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn" onclick="closeModal(); resetForm();">Upload Lagi</button>
+                <a href="/files" class="modal-btn secondary">📁 Lihat Semua Tugas</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.querySelector('.upload-form');
+        const loading = document.getElementById('loading');
+        const modal = document.getElementById('modal');
+        const modalIcon = document.getElementById('modalIcon');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalDetails = document.getElementById('modalDetails');
+        const closeBtn = document.querySelector('.close');
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Show loading
+            loading.style.display = 'block';
+            form.querySelector('.submit-section').style.display = 'none';
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                // Hide loading
+                loading.style.display = 'none';
+                form.querySelector('.submit-section').style.display = 'flex';
+
+                if (result.success) {
+                    showModal('success', result.message, result.data);
+                } else {
+                    showModal('error', result.message);
+                }
+            } catch (error) {
+                // Hide loading
+                loading.style.display = 'none';
+                form.querySelector('.submit-section').style.display = 'flex';
+                
+                showModal('error', 'Terjadi kesalahan saat mengupload file. Silakan coba lagi.');
+            }
+        });
+
+        function showModal(type, message, data = null) {
+            if (type === 'success') {
+                modalIcon.textContent = '✅';
+                modalIcon.className = 'modal-icon success';
+                modalTitle.textContent = 'Upload Berhasil!';
+                modalTitle.className = 'modal-title success';
+                
+                if (data) {
+                    modalDetails.style.display = 'block';
+                    modalDetails.innerHTML = `
+                        <p><strong>Nama:</strong> ${data.nama}</p>
+                        <p><strong>NRP:</strong> ${data.nrp}</p>
+                        <p><strong>File:</strong> ${data.fileName}</p>
+                        <p><strong>Status:</strong> Berhasil disimpan ke S3</p>
+                    `;
+                }
+            } else {
+                modalIcon.textContent = '❌';
+                modalIcon.className = 'modal-icon error';
+                modalTitle.textContent = 'Upload Gagal!';
+                modalTitle.className = 'modal-title error';
+                modalDetails.style.display = 'none';
+            }
+            
+            modalMessage.textContent = message;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        function resetForm() {
+            form.reset();
+        }
+
+        // Close modal when clicking X or outside modal
+        closeBtn.onclick = closeModal;
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display === 'block') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

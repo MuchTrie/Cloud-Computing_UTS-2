@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Tugas - AWS S3</title>
+    <link rel="stylesheet" href="style.css">
+<body>
+    <!-- Animated Particles Background -->
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container">
+        <!-- Top Navigation -->
+        <div class="top-nav">
+            <a href="/" class="back-link">
+                <span class="back-icon">←</span>
+                <span class="back-text">Kembali</span>
+            </a>
+        </div>
+
+        <div class="header-section">
+            <h1>📁 Daftar Berkas</h1>
+            <p class="subtitle">Semua Berkas yang sudah diupload ke AWS S3</p>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="filter-header">
+                <div class="filter-title">
+                    <span>🔍 Filter berdasarkan jenis file:</span>
+                </div>
+                <button class="refresh-btn" onclick="refreshFiles()" title="Refresh data">
+                    <span class="refresh-icon">🔄</span>
+                    <span class="refresh-text">Refresh</span>
+                </button>
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterFiles('all')" data-filter="all">
+                    📁 Semua
+                </button>
+                <button class="filter-btn" onclick="filterFiles('document')" data-filter="document">
+                    📄 Dokumen
+                </button>
+                <button class="filter-btn" onclick="filterFiles('image')" data-filter="image">
+                    🖼️ Gambar
+                </button>
+                <button class="filter-btn" onclick="filterFiles('video')" data-filter="video">
+                    🎥 Video
+                </button>
+                <button class="filter-btn" onclick="filterFiles('archive')" data-filter="archive">
+                    📦 Archive
+                </button>
+                <button class="filter-btn" onclick="filterFiles('other')" data-filter="other">
+                    📎 Lainnya
+                </button>
+            </div>
+        </div>
+
+        <!-- Files Count -->
+        <div class="files-info">
+            <span class="files-count">Total: 0 files</span>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-state" id="loadingState">
+            <div class="loading-spinner"></div>
+            <p>Memuat daftar tugas...</p>
+        </div>
+
+        <!-- Files Container -->
+        <div class="files-container" id="filesContainer" style="display: none;">
+            <!-- Files will be populated here -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <div class="empty-icon">📂</div>
+            <h3>Belum ada tugas yang diupload</h3>
+            <p>Mulai upload tugas pertama Anda</p>
+            <a href="/" class="btn btn-primary">Upload Sekarang</a>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let allFiles = [];
+        let currentFilter = 'all';
+
+        // File type categories
+        const fileCategories = {
+            document: ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx'],
+            image: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'],
+            video: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'],
+            archive: ['zip', 'rar', '7z', 'tar', 'gz'],
+            other: []
+        };
+
+        // File type icons
+        function getFileIcon(fileName) {
+            const ext = fileName.split('.').pop().toLowerCase();
+            
+            const icons = {
+                'pdf': '📄',
+                'doc': '📝', 'docx': '📝',
+                'xls': '📊', 'xlsx': '📊',
+                'ppt': '📈', 'pptx': '📈',
+                'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️',
+                'mp4': '🎥', 'avi': '🎥', 'mov': '🎥',
+                'zip': '📦', 'rar': '📦',
+                'txt': '📃'
+            };
+            
+            return icons[ext] || '📎';
+        }
+
+        // Get file category
+        function getFileCategory(fileName) {
+            const ext = fileName.split('.').pop().toLowerCase();
+            
+            for (const [category, extensions] of Object.entries(fileCategories)) {
+                if (extensions.includes(ext)) {
+                    return category;
+                }
+            }
+            return 'other';
+        }
+
+        // Filter files function
+        function filterFiles(category) {
+            currentFilter = category;
+            
+            // Update active filter button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-filter="${category}"]`).classList.add('active');
+            
+            // Filter and render files
+            const filteredFiles = category === 'all' 
+                ? allFiles 
+                : allFiles.filter(file => getFileCategory(file.name) === category);
+            
+            renderFiles(filteredFiles);
+            
+            // Update files count
+            updateFilesCount(filteredFiles.length, allFiles.length);
+        }
+
+        // Update files count display
+        function updateFilesCount(filtered, total) {
+            const countDisplay = document.querySelector('.files-count');
+            if (countDisplay) {
+                if (currentFilter === 'all') {
+                    countDisplay.textContent = `Total: ${total} file${total !== 1 ? 's' : ''}`;
+                } else {
+                    countDisplay.textContent = `Menampilkan: ${filtered} dari ${total} file${total !== 1 ? 's' : ''}`;
+                }
+            }
+        }
+
+        // Load files from API
+        async function loadFiles() {
+            const loadingState = document.getElementById('loadingState');
+            const filesContainer = document.getElementById('filesContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            // Show loading
+            loadingState.style.display = 'block';
+            filesContainer.style.display = 'none';
+            emptyState.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/files');
+                if (!response.ok) throw new Error('Failed to fetch files');
+                
+                const files = await response.json();
+                allFiles = files; // Store globally for filtering
+
+                loadingState.style.display = 'none';
+
+                if (files.length === 0) {
+                    emptyState.style.display = 'block';
+                    updateFilesCount(0, 0);
+                } else {
+                    filesContainer.style.display = 'block';
+                    // Reset filter to 'all' and render all files
+                    currentFilter = 'all';
+                    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                    document.querySelector('[data-filter="all"]').classList.add('active');
+                    renderFiles(files);
+                    updateFilesCount(files.length, files.length);
+                }
+            } catch (error) {
+                console.error('Error loading files:', error);
+                loadingState.style.display = 'none';
+                updateFilesCount(0, 0);
+                
+                // Show error state
+                emptyState.innerHTML = `
+                    <div class="empty-icon">⚠️</div>
+                    <h3>Gagal memuat data</h3>
+                    <p>Terjadi kesalahan saat mengambil daftar tugas</p>
+                    <button class="btn btn-primary" onclick="loadFiles()">Coba Lagi</button>
+                `;
+                emptyState.style.display = 'block';
+            }
+        }
+
+        // Render files to the container
+        function renderFiles(files) {
+            const filesContainer = document.getElementById('filesContainer');
+            filesContainer.innerHTML = '';
+
+            files.forEach((file, index) => {
+                const fileCard = document.createElement('div');
+                fileCard.className = 'file-card';
+                fileCard.style.animationDelay = `${index * 0.1}s`;
+                
+                fileCard.innerHTML = `
+                    <div class="file-header">
+                        <div class="file-icon">${getFileIcon(file.originalName || file.name)}</div>
+                        <div class="file-info">
+                            <h3 class="file-name">${file.originalName || file.name}</h3>
+                            <div class="student-info">
+                                <p class="file-meta">� <strong>${file.nama}</strong></p>
+                                <p class="file-meta">🆔 NRP: ${file.nrp}</p>
+                            </div>
+                            <p class="file-meta">📦 ${file.size}</p>
+                            <p class="file-meta">� Upload: ${file.uploadDate}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="file-actions">
+                        <button class="action-btn download" onclick="downloadFile('${file.url}', '${file.originalName || file.name}')" title="Download File">
+                            📥 Download
+                        </button>
+                    </div>
+                `;
+                
+                filesContainer.appendChild(fileCard);
+            });
+        }
+
+        // Download file
+        function downloadFile(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Refresh files
+        function refreshFiles() {
+            loadFiles();
+        }
+
+        // Load files when page loads
+        document.addEventListener('DOMContentLoaded', loadFiles);
+    </script>
+</body>
+</html>

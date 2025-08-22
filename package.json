@@ -1,0 +1,27 @@
+{
+  "name": "awss3_frontend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.1692.0",
+    "dotenv": "^17.2.0",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.14.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/diashitenas/awsS3_frontend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/diashitenas/awsS3_frontend/issues"
+  },
+  "homepage": "https://github.com/diashitenas/awsS3_frontend#readme",
+  "description": ""
+}
