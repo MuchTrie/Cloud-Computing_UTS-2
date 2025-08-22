@@ -1,9 +1,13 @@
+require('dotenv').config();
 const express = require('express');
+const AWS = require('aws-sdk');
+AWS.config.update({ region: 'ap-southeast-2' }); // ganti sesuai region SNS kamu
+const sns = new AWS.SNS();
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
-const { AWS, dbConfig } = require('./config');
+const { dbConfig } = require('./config');
 
 const app = express();
 const s3 = new AWS.S3();
@@ -108,6 +112,22 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     if (rows.length > 0) {
       status = 'duplikat';
       plagiarismChecked = true;
+      // Kirim notifikasi ke SNS jika duplikat
+      try {
+        const notif = {
+          nama,
+          nrp,
+          filename: req.file.originalname,
+          status: 'duplikat'
+        };
+        await sns.publish({
+          TopicArn: process.env.SNS_TOPIC_ARN,
+          Subject: 'Deteksi Plagiarisme Tugas',
+          Message: JSON.stringify(notif)
+        }).promise();
+      } catch (snsErr) {
+        console.error('Gagal publish ke SNS:', snsErr);
+      }
       if (req.file && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
       }
