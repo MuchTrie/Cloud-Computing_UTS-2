@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Much-Tugas2</title>
+    <title>UTS 2</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -24,7 +24,7 @@
     <div class="container">
         <div class="header-section">
             <h1>📤 Upload Berkas</h1>
-            <p class="subtitle">Submit your File to AWS S3</p>
+            <p class="subtitle">Submit tugas kamu disini </p>
         </div>
         
         <!-- Single Form Section -->
@@ -61,6 +61,12 @@
                 <div class="loading" id="loading">
                     <div class="loading-spinner"></div>
                     <p>Uploading tugas...</p>
+                    <div id="plagiarismBar" style="display:none; margin-top:10px;">
+                        <div style="background:#222; border-radius:8px; overflow:hidden; height:18px;">
+                            <div id="plagiarismProgress" style="width:0%;height:18px;background:#ff4757;transition:width 0.7s;"></div>
+                        </div>
+                        <p id="plagiarismText" style="margin:0.5em 0 0 0; font-size:0.95em; color:#ff4757;">Memeriksa plagiarisme...</p>
+                    </div>
                 </div>
             </form>
             
@@ -102,53 +108,88 @@
 
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             // Show loading
             loading.style.display = 'block';
             form.querySelector('.submit-section').style.display = 'none';
+            // Reset plagiarism bar
+            const plagiarismBar = document.getElementById('plagiarismBar');
+            const plagiarismProgress = document.getElementById('plagiarismProgress');
+            const plagiarismText = document.getElementById('plagiarismText');
+            plagiarismBar.style.display = 'block';
+            plagiarismProgress.style.width = '0%';
+            plagiarismText.textContent = 'Memeriksa plagiarisme...';
+
+            // Simulasi progress bar (animasi loading)
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 30;
+                if (progress > 90) progress = 90;
+                plagiarismProgress.style.width = progress + '%';
+            }, 400);
 
             const formData = new FormData(form);
-
             try {
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
                 });
-
                 const result = await response.json();
-                
-                // Hide loading
-                loading.style.display = 'none';
-                form.querySelector('.submit-section').style.display = 'flex';
-
-                if (result.success) {
-                    showModal('success', result.message, result.data);
-                } else {
-                    showModal('error', result.message);
-                }
+                clearInterval(interval);
+                plagiarismProgress.style.width = '100%';
+                setTimeout(() => {
+                    plagiarismBar.style.display = 'none';
+                    loading.style.display = 'none';
+                    form.querySelector('.submit-section').style.display = 'flex';
+                    // Cek jika status duplikat dari backend
+                    if (result.data && result.data.status === 'duplikat') {
+                        showModal('duplikat', result.message, result.data);
+                    } else if (result.success) {
+                        showModal('success', result.message, result.data);
+                    } else {
+                        showModal('error', result.message);
+                    }
+                }, 700);
             } catch (error) {
-                // Hide loading
+                clearInterval(interval);
+                plagiarismBar.style.display = 'none';
                 loading.style.display = 'none';
                 form.querySelector('.submit-section').style.display = 'flex';
-                
                 showModal('error', 'Terjadi kesalahan saat mengupload file. Silakan coba lagi.');
             }
         });
 
         function showModal(type, message, data = null) {
+            if (type === 'duplikat') {
+                modalIcon.textContent = '⚠️';
+                modalIcon.className = 'modal-icon error';
+                modalTitle.textContent = 'Upload Duplikat!';
+                modalTitle.className = 'modal-title error';
+                let statusText = '<span style="color:#dc3545;font-weight:bold">Duplikat</span>';
+                modalDetails.style.display = 'block';
+                modalDetails.innerHTML = `
+                    <p><strong>Nama:</strong> ${data.nama}</p>
+                    <p><strong>NRP:</strong> ${data.nrp}</p>
+                    <p><strong>File:</strong> ${data.fileName}</p>
+                    <p><strong>Status Plagiarisme:</strong> ${statusText}</p>
+                `;
+                modalMessage.textContent = message || 'File dengan nama yang sama sudah pernah diupload. Status: Duplikat.';
+                modal.style.display = 'flex';
+                return;
+            }
             if (type === 'success') {
                 modalIcon.textContent = '✅';
                 modalIcon.className = 'modal-icon success';
                 modalTitle.textContent = 'Upload Berhasil!';
                 modalTitle.className = 'modal-title success';
-                
                 if (data) {
+                    let statusText = data.status === 'duplikat' ? '<span style="color:#dc3545;font-weight:bold">Duplikat</span>' : '<span style="color:#28a745;font-weight:bold">Original</span>';
                     modalDetails.style.display = 'block';
                     modalDetails.innerHTML = `
                         <p><strong>Nama:</strong> ${data.nama}</p>
                         <p><strong>NRP:</strong> ${data.nrp}</p>
                         <p><strong>File:</strong> ${data.fileName}</p>
-                        <p><strong>Status:</strong> Berhasil disimpan ke S3</p>
+                        <p><strong>Status Plagiarisme:</strong> ${statusText}</p>
+                        <p><strong>Lokasi S3:</strong> <a href="${data.location}" target="_blank" style="color:#ff4757;">Lihat File</a></p>
                     `;
                 }
             } else {
@@ -158,7 +199,6 @@
                 modalTitle.className = 'modal-title error';
                 modalDetails.style.display = 'none';
             }
-            
             modalMessage.textContent = message;
             modal.style.display = 'flex';
         }

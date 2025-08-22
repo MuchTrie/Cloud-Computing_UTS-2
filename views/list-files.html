@@ -226,28 +226,32 @@
                 const fileCard = document.createElement('div');
                 fileCard.className = 'file-card';
                 fileCard.style.animationDelay = `${index * 0.1}s`;
-                
+                // Status badge
+                let statusBadge = '';
+                if (file.status === 'duplikat') {
+                  statusBadge = `<span class="badge" style="background:#dc3545; color:#fff; margin-left:8px;">Duplikat</span>`;
+                } else {
+                  statusBadge = `<span class="badge" style="background:#28a745; color:#fff; margin-left:8px;">Original</span>`;
+                }
                 fileCard.innerHTML = `
                     <div class="file-header">
                         <div class="file-icon">${getFileIcon(file.originalName || file.name)}</div>
                         <div class="file-info">
-                            <h3 class="file-name">${file.originalName || file.name}</h3>
+                            <h3 class="file-name">${file.originalName || file.name} ${statusBadge}</h3>
                             <div class="student-info">
-                                <p class="file-meta">� <strong>${file.nama}</strong></p>
+                                <p class="file-meta">👤 <strong>${file.nama}</strong></p>
                                 <p class="file-meta">🆔 NRP: ${file.nrp}</p>
                             </div>
                             <p class="file-meta">📦 ${file.size}</p>
-                            <p class="file-meta">� Upload: ${file.uploadDate}</p>
+                            <p class="file-meta">⏰ Upload: ${file.uploadDate}</p>
                         </div>
                     </div>
-                    
                     <div class="file-actions">
                         <button class="action-btn download" onclick="downloadFile('${file.url}', '${file.originalName || file.name}')" title="Download File">
                             📥 Download
                         </button>
                     </div>
                 `;
-                
                 filesContainer.appendChild(fileCard);
             });
         }
